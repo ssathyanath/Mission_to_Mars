@@ -14,16 +14,12 @@ def scrape_all():
       "news_paragraph": news_paragraph,
       "featured_image": featured_image(browser),
       "facts": mars_facts(),
-      "last_modified": dt.datetime.now()
+      "last_modified": dt.datetime.now(),
+      "hemispheres" : hemisphere_data(browser)
     }
     # Stop webdriver and return data
     browser.quit()
     return data
-
-
-# # Set the executable path and initialize the chrome browser in splinter
-# executable_path = {'executable_path': 'chromedriver'}
-# browser = Browser('chrome', **executable_path, headless = False)
 
 def mars_news(browser):
     # Visit the mars nasa news site
@@ -91,11 +87,41 @@ def mars_facts():
 
     # Assign columns and set index of dataframe
     df.columns=['Description', 'Mars']
-    df.set_index('Description', inplace=True)
-    return df.to_html()
+    df.set_index('Description')
+    return df.to_html(classes=["table-bordered", "table-striped"], index=False)
 
-#Quit the browser
-# browser.quit()
+
+
+def hemisphere_data(browser):
+    # 1. Use browser to visit the URL 
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+    
+    # 2. Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+
+    # 3. Write code to retrieve the image urls and titles for each hemisphere.
+    html=browser.html
+    hemisphere_soup = soup(html, 'html.parser')
+    hemisphere_details = hemisphere_soup.find_all('div', class_="description" )
+
+    for item in hemisphere_details:
+        # Get induvidual Hemisphere URL 
+        hemisphere_name = item.find("h3").get_text()
+        hemisphere_url ="https://astrogeology.usgs.gov" + item.find("a").get("href")
+        # Browse induvidual Hemisphere URL 
+        browser.visit(hemisphere_url)
+        new_html=browser.html
+        hemisphere_detail_soup = soup(new_html, 'html.parser')
+        # Get full resolution url
+        hemisphere_full_url = "https://astrogeology.usgs.gov" + hemisphere_detail_soup.find('img', class_="wide-image" ).get("src")
+        # convert to dict and store in a list
+        dict_hemisphere = {}
+        dict_hemisphere["image_url"] = hemisphere_full_url
+        dict_hemisphere["title"] = hemisphere_name
+        hemisphere_image_urls.append(dict_hemisphere)
+    
+    return hemisphere_image_urls
 
 if __name__ == "__main__":
     # If running as script, print scraped data
